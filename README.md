@@ -5,6 +5,8 @@ Scripts to assist with GPU passthrough
 ### Credits:
 This is based on code and guides located at https://gitlab.com/risingprismtv/single-gpu-passthrough
 
+NOTE - All commnads listed below are for Arch linux as seen in my video, check the link above for commands to other distros
+
 ---
 ## Preparations:
 Check if your motherboard BIOS version is up to date. (This can help you have better IOMMU groups for the next steps)
@@ -31,6 +33,13 @@ Set the parameter respective to your system in the grub config:
 |--------------|---------------|
 | amd_iommu=on | intel_iommu=on|
 
-Set the parameter iommu=pt in grub config for safety reasons, regardless of CPU type
+Set the parameter ```iommu=pt``` in grub config for safety reasons, regardless of CPU type
 
-Mostly for AMD users, the parameter video=efifb:off can fix issues when returning back to the host, it is recommended that you add it.
+Mostly for AMD users, the parameter ```video=efifb:off``` can fix issues when returning back to the host, it is recommended that you add it.
+
+Run ```sudo nvim /etc/default/grub```
+Edit the line that starts with ```GRUB_CMDLINE_LINUX_DEFAULT``` so it ressembles something like this, keeping any previous parameters if there is any:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="intel_iommu=on iommu=pt"
+```
+Update grub with the command ```sudo grub-mkconfig -o /boot/grub/grub.cfg```
