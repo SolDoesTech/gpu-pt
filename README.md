@@ -5,7 +5,7 @@ Scripts to assist with GPU passthrough
 ### Credits:
 This is based on code and guides located at https://gitlab.com/risingprismtv/single-gpu-passthrough
 
-NOTE - All commnads listed below are for Arch linux as seen in my video, check the link above for commands to other distros
+**NOTE** - All commnads listed below are for Arch linux as seen in my video, check the gitlab link above for gides and commands for other distros
 
 ---
 ## Preparations:
@@ -38,8 +38,35 @@ Set the parameter ```iommu=pt``` in grub config for safety reasons, regardless o
 Mostly for AMD users, the parameter ```video=efifb:off``` can fix issues when returning back to the host, it is recommended that you add it.
 
 Run ```sudo nvim /etc/default/grub```
-Edit the line that starts with ```GRUB_CMDLINE_LINUX_DEFAULT``` so it ressembles something like this, keeping any previous parameters if there is any:
+Edit the line that starts with ```GRUB_CMDLINE_LINUX_DEFAULT``` so it ressembles something like this, **keeping any previous parameters if there are any:**
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="intel_iommu=on iommu=pt"
 ```
-Update grub with the command ```sudo grub-mkconfig -o /boot/grub/grub.cfg```
+On my clean install with Intel CPU the line looked like this:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet intel_iommu=on iommu=pt"
+```
+
+After you edit the file you will nee dto update grub with this command ```sudo grub-mkconfig -o /boot/grub/grub.cfg```
+
+---
+## Configuration of libvirt
+### Installing the virtualization packages
+
+Now that we prepared both the bios and grub, we need to install the necessary virtualization packages on our system.
+```
+sudo pacman -S virt-manager qemu vde2 ebtables iptables-nft nftables dnsmasq bridge-utils ovmf
+```
+**Please note:** Conflicts may happen when installing these programs.
+A warning like the below example may apear in your terminal:
+```:: iptables and iptables-nft are in conflict. Remove iptables? [y/N]```
+If you do encounter this kind of message, press ```y``` and ```enter``` to continue the installation.
+
+**Note** - When installing you may see the following:
+```
+:: There are 3 providers available for qemu:
+:: Repository extra
+   1) qemu-base  2) qemu-desktop  3) qemu-full
+```
+Select option 2 by typing ```2``` and then hit ```enter``` to continue.
+
