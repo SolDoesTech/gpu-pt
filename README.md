@@ -161,8 +161,8 @@ Once you have the file, extract it and note the location (~/Downloads/ by defaul
 Switch to a TTY with ```CTRL + ALT + F3``` (or F4)
 
 Stop your display manager, here are some examples
-SDDM -  ```sudo systemctl stop sddm```
-GDM - ```sudo systemctl stop gdm3```
+- SDDM: ```sudo systemctl stop sddm```
+- GDM: ```sudo systemctl stop gdm3```
 
 Now we need to unload the drivers so the NVFlash tool can have access to the GPU, execute the following:
 ```
@@ -188,11 +188,136 @@ sudo modprobe nvidia_modeset
 ```
 
 Now we are ready to start the display manager, so depending which one you stopped earlier you can use:
-SDDM - ```sudo systemctl restart sddm```
-GDM - ```sudo systemctl restart gdm3```
+- SDDM: ```sudo systemctl restart sddm```
+- GDM: ```sudo systemctl restart gdm3```
 
 ### Patching the ROM
 In order to use the ROM it must be first edited with a HEX editor. Download Okteta with:
 ```
 sudo pacman -S okteta
 ```
+
+Make a copy of the vbios.rom file **keep the original safe** so you have a backup. For the sake of this document we will call the copy "vbios_copy.rom"
+
+Open vbios_copy.rom with Okteta, use ```CTRL + F``` to search the file and change the settings to ```Char``` and search for the value ```VIDEO```.
+
+Now, place your cursor **before the first U** before the ```VIDEO``` value you found and select everything before it. Hit the **INS** (Insert) key to switch Okteta to Edit mode and with everything selected before the **U** hit the "Delete" key on your keyboard.
+
+Save the file as another copy naming it "vbios_patched.rom".
+
+### Moving the ROM
+We now need to move the patched ROM to the correct location. First we need to create a directory:
+```
+sudo mkdir /usr/share/vgabios
+```
+Now we need to copy the ROM and set the permissions:
+```
+cp ./vbios_patched.rom /usr/share/vgabios/
+cd /usr/share/vgabios
+sudo chmod -R 644 vbios_patched.rom
+sudo chown yourusername:yourusername vbios_patched.rom
+```
+
+## Clone this repo
+If you haven't done so already, clone a copy of this repo.
+```
+git clone https://github.com/SolDoesTech/gpu-pt.git
+```
+### Execute script
+Now cd into the downloaded repo and execute the Install script:
+```
+cd gpu-pt
+sudo ./install_hooks.sh
+```
+
+The above script install all the hooks needed to disconnect the video card and allows the GPU to be attached to the VM.
+
+Next execute the "get-group" script with ```./get-group```. Pay attention to the devices in your GPU group as you will later need to attach all of these devices to your VM with the exception of any devices labeled as ```PCI bridge [0604]```
+
+### Validate installed files
+You would want to confirm that the following files were created:
+```
+/etc/systemd/system/libvirt-nosleep@.service
+/bin/vfio-startup.sh
+/bin/vfio-teardown.sh
+/etc/libvirt/hooks/qemu
+```
+
+### Update the hook script
+We now need to update the hook script so id doesn't execute by mistake as we are building vms:
+```
+sudo nvim /etc/libvirt/hooks/qemu
+```
+Edit the line that reads ```if [[ $OBJECT == "win10" ]]; then``` replacing "win10" with "somevm". This is a place holder, we will come back and edit this file again once our VM is ready for the GPU.
+
+## Create a VM
+Use the following process to create your VM, this process is similar for both Windows or Linux guest machines. Since you can only run one VM with GPU passthrough then you can follow this step as many times as needed for each type of VM you are going to use with the GPU passthrough feature. 
+
+- Launch the "Virtual Machine Manger". 
+- Click on "Create new virtual machine" button. 
+- Step 1: Select "Local install media (ISO image or CDROM).
+- Step 2: Click on "Browse" and then on "Browse Local" and navigate to your OS install ISO.
+- Step 3: Assign resources, you can use the default here as we would update this value later.
+- Step 4: Set the size of your VM disk storage.
+- Step 5: Name your VM, select anything you like here as long as it is **NOT** "somevm". **IMPORTANT** place a check mark in "Customize configuration before install" and then hit "Finish"
+
+### Customize the VM
+We now need to customize the VM, do the following in each of the tabs described below and hit "Apply" before moving to the next tab:
+- Overview tab: switch "Firmware" from "BIOS" to "UEFI".
+- CPUs tab: Adjust your CPU config to use all cores you can check your CPU with: ```lscpu | egrep 'Model name|Socket|Thread|NUMA|CPU\(s\)'```, the total number in "vCPU allocation" should match "Logical host CPUs" value.
+- Memory tab: Adjust your VMs memory here, a good value is half of your system's total RAM. So if you have 32GB then assign 16GB to your VM.
+- Boot Options tab: Place a check mark near "SATA CDROM" and move it up so its the first device.
+- VirtIO Disk1 tab: In "Advanced options" change "Cache mode" to "writeback".
+- NIC tab: Make sure that "Device model" is "virtio"
+- **Windows VM only**: click on the "Add Hardware" button (down below). Select "Storage" from the list and switch "Device type" to "CDROM device". Click on "Manage" then click on "Browser Local" and navigate to the "virtio-win..." ISO we downloaded earlier. This would be needed during the Windows Install process to help discover the hard drive.
+
+With all the options set you can now click on "Begin Installation" on the top. This would kick off the OS install process.
+
+### OS Install
+On Linux the OS install should be able to complete with out any additional steps. You would just go through the process as you normally would. 
+
+On Windows there are a few steps needed to install the virtio drivers.
+- During the Windows Setup you will be prompted with "Where do you want to install Windows?". Typically a drive would be present here but with VIRTIO the list would be empty.
+- Click "Load driver"
+- Select the drive with the virtio-win ISO
+- navigate to the "amd64" folder and ten to your Windows version folder (w11 for example)
+- You would now see the virtio driver in the list, select it and click "Next".
+- You should now see your VM drive so you can use it as an install target.
+
+Once Windows had installed and booted to the desktop you would also want to install the full virtio driver package.
+- Open File Explorer, your virtio-win ISO should be present.
+- Open the drive and scroll to "virtio-win-gt-x64" and execute it.
+- Follow the prompt accepting the default values.
+This step would make all the devices appear and work as they should.
+
+We can now power down our OS so we can modify the VM config to include the GPU
+
+## VM Config - Post OS Install
+With your VM powered off remove the following items from the config:
+- Any "USB Redirector"
+- Display Spice
+- Video QXL
+
+If you are unable to remove all of the above via the GUI then you will need to edit the XML and remove the following:
+```
+  <graphics type="spice" autoport="yes">
+    <listen type="address"/>
+    <gl enable="no"/>
+  </graphics>
+```
+```
+  <audio id="1" type="none"/>
+```
+```
+  <video>
+    <model type="bochs" vram="16384" heads="1" primary="yes"/>
+    <address type="pci" domain="0x0000" bus="0x05" slot="0x00" function="0x0"/>
+  </video>
+```
+```
+  <channel type="spicevmc">
+    <target type="virtio" name="com.redhat.spice.0"/>
+    <address type="virtio-serial" controller="0" bus="0" port="1"/>
+  </channel>
+```
+
