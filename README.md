@@ -46,7 +46,9 @@ On my clean install with Intel CPU the line looked like this:
 GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet intel_iommu=on iommu=pt"
 ```
 
-After you edit the file you will nee dto update grub with this command ```sudo grub-mkconfig -o /boot/grub/grub.cfg```
+After you edit the file you will need to update grub with this command ```sudo grub-mkconfig -o /boot/grub/grub.cfg```
+
+**Dont forget to reboot**
 
 ---
 ## Configuration of libvirt
