@@ -278,6 +278,12 @@ We now need to customize the VM, do the following in each of the tabs described 
 - NIC tab: Make sure that "Device model" is "virtio"
 - **Windows VM only**: click on the "Add Hardware" button (down below). Select "Storage" from the list and switch "Device type" to "CDROM device". Click on "Manage" then click on "Browser Local" and navigate to the "virtio-win..." ISO we downloaded earlier. This would be needed during the Windows Install process to help discover the hard drive.
 
+**NOTE** if installing Windows 11 you will need to add a TPM module. Before you can so that you will need to install the ```swtpm``` package with 
+```
+sudo pacman -S swtpm
+```
+You can then add a TPM from the menu with settings CRB and version 2.0
+
 With all the options set you can now click on "Begin Installation" on the top. This would kick off the OS install process.
 
 ### OS Install
