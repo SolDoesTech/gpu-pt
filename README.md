@@ -219,7 +219,7 @@ sudo mkdir /usr/share/vgabios
 ```
 Now we need to copy the ROM and set the permissions:
 ```
-cp ./vbios_patched.rom /usr/share/vgabios/
+sudo cp ./vbios_patched.rom /usr/share/vgabios/
 cd /usr/share/vgabios
 sudo chmod -R 644 vbios_patched.rom
 sudo chown yourusername:yourusername vbios_patched.rom
