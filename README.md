@@ -253,7 +253,7 @@ Edit the line that reads ```if [[ $OBJECT == "win10" ]]; then``` replacing "win1
 ## Create a VM
 Use the following process to create your VM, this process is similar for both Windows or Linux guest machines. Since you can only run one VM with GPU passthrough then you can follow this step as many times as needed for each type of VM you are going to use with the GPU passthrough feature. 
 
-- Launch the "Virtual Machine Manger". 
+- Launch the "Virtual Machine Manager". 
 - Click on "Create new virtual machine" button. 
 - Step 1: Select "Local install media (ISO image or CDROM).
 - Step 2: Click on "Browse" and then on "Browse Local" and navigate to your OS install ISO.
@@ -290,6 +290,7 @@ Once Windows had installed and booted to the desktop you would also want to inst
 - Follow the prompt accepting the default values.
 This step would make all the devices appear and work as they should.
 
+Confirm your VM can reach the internet
 We can now power down our OS so we can modify the VM config to include the GPU
 
 ## VM Config - Post OS Install
@@ -321,3 +322,38 @@ If you are unable to remove all of the above via the GUI then you will need to e
   </channel>
 ```
 
+### Add the GPU
+Now we are ready to add the GPU and to the VM
+- click on "Add Hardware".
+- select "PCI Host Device".
+- Add every item in your GPU group as we discovered earlier.
+
+If Nvidia GPU, we need to add the ROM file to teh XML:
+- select your primary GPU PCI device
+- click on XML
+- Below the "```</source>```" add a new line and enter ```<rom file='/usr/share/vgabios/vbios_patched.rom'/>```
+- click apply.
+
+
+### Add USB Devices
+Do the following for any devices you would like to pass to your VM. This can be USB Keyboard, USB Mice, USB Headphones, USB game controllers etc.
+- Click on "Add Hardware".
+- Select "USB Host Device".
+- Select your USB wired device from the list.
+
+**DO NOT Boot the VM just yet**
+
+## Setup VM hook
+Now we need to go back and setup the hook so it will kick off the scripts for the GPU disconnect from the host to the VM.
+```
+sudo nvim /etc/libvirt/hooks/qemu
+```
+Edit the line that reads ```if [[ $OBJECT == "somevm" ]]; then``` replacing "somevm" with the name of your new VM. If you have multiples you can add them in with the ```||``` (or operator), for example:
+```
+if [[ $OBJECT == "vm1" || $OBJECT == "vm2" ]]; then
+```
+
+## boot the VM
+You can now boot your VM. On Linux things would just work out of the box. On Windows the VM would boot and would give you a black screen at first but after some time Windows would reach out to the internet and auto download and install the Nvidia driver which at that point you would get the desktop.
+
+Congratulations!!
